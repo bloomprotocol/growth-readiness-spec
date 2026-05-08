@@ -1,0 +1,29 @@
+{
+  "name": "@bloomprotocol/growth-readiness-spec",
+  "version": "0.2.0",
+  "description": "Reference TypeScript implementation of the Growth Readiness Score (v0.2.0). Cross-harness fair scoring for AI agents.",
+  "license": "MIT",
+  "type": "module",
+  "main": "scorer.ts",
+  "scripts": {
+    "test": "tsx --test scorer.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bloomprotocol/growth-readiness-spec.git"
+  },
+  "keywords": [
+    "ai-agents",
+    "growth-readiness",
+    "agent-evaluation",
+    "claude-code",
+    "hermes",
+    "openclaw",
+    "codex",
+    "bloom-protocol"
+  ]
+}
