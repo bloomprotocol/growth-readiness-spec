@@ -137,6 +137,37 @@ describe('Hermes', () => {
   });
 });
 
+// ── Printing Press recognition (v0.2.1 additive) ────────────────
+
+describe('Printing Press', () => {
+  test('Hermes with only pp-* CLIs (no browser/http) gets webFetch credit', () => {
+    const setup: SetupSnapshot = {
+      runtime: 'hermes',
+      gatewayAvailable: true,
+      declaredTools: ['pp-stripe', 'pp-linkedin'],
+      declaredSkills: ['bloom-visibility'],
+      persistsContext: true,
+      claudeMdPresent: false,
+    };
+    const r = computeReadiness(setup);
+    ex(r.gaps.find((g) => g.capability === 'webFetch')).toBeUndefined();
+  });
+
+  test('non-pp tools do not trigger pp recognition', () => {
+    const setup: SetupSnapshot = {
+      runtime: 'hermes',
+      gatewayAvailable: true,
+      declaredTools: ['some-other-cli', 'pep-tool'],
+      declaredSkills: [],
+      persistsContext: true,
+      claudeMdPresent: false,
+    };
+    const r = computeReadiness(setup);
+    const webFetchGap = r.gaps.find((g) => g.capability === 'webFetch');
+    ex(webFetchGap === undefined).toBe(false);
+  });
+});
+
 // ── Determinism + version stability ─────────────────────────────
 
 describe('Determinism', () => {
@@ -157,8 +188,8 @@ describe('Determinism', () => {
     ex(r1.axes).toEqual(r2.axes);
   });
 
-  test('report carries growthReadinessVersion v0.2.0', () => {
+  test('report carries growthReadinessVersion v0.2.1', () => {
     const r = computeReadiness(setup);
-    ex(r.growthReadinessVersion).toBe('v0.2.0');
+    ex(r.growthReadinessVersion).toBe('v0.2.1');
   });
 });

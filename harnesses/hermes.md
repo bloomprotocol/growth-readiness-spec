@@ -78,5 +78,20 @@ async function probeHermes(): Promise<{
 ## Common gotchas
 
 - **Empty gateway is normal at first.** A fresh Hermes install often has zero tools registered. Score will be ~35–50% (Bud, low-end). Install at least `web_search` + `http` to get above 60%.
-- **`web_search` vs `web`.** Both are accepted by the v0.2.0 scorer. `web_search` is the canonical Hermes name; `web` is the legacy short form some Hermes builds still use.
+- **`web_search` vs `web`.** Both are accepted by the v0.2.0+ scorer. `web_search` is the canonical Hermes name; `web` is the legacy short form some Hermes builds still use.
 - **No `claudeMdPresent`.** Hermes never has a `CLAUDE.md` — the scorer credits `projectContext` based on `persistsContext` for Hermes specifically, so the file isn't needed.
+
+## Printing Press printed CLIs (v0.2.1+)
+
+[mvanhorn/cli-printing-press](https://github.com/mvanhorn/cli-printing-press) generates token-efficient site-specific CLIs that install into your Hermes Tool Gateway. As of cli-printing-press [PR #655](https://github.com/mvanhorn/cli-printing-press/pull/655) (merged 2026-05-07) the printed CLIs ship Hermes-aligned frontmatter and a "Install via Hermes" section in their README.
+
+If you have any printed CLI in your gateway — declared as a tool id with the `pp-` prefix (e.g. `pp-stripe`, `pp-google-flights`, `pp-linkedin`) — Bloom's v0.2.1 scorer credits it toward your `webFetch` capability:
+
+```ts
+declaredTools: ['pp-stripe', 'pp-linkedin']
+// → webFetch: true (recognized via pp-* prefix)
+```
+
+This is honest detection: each printed CLI IS a structured fetcher for its target site, even when no generic `browser` / `http` tool is registered. For the `webFetch` axis specifically, a few printed CLIs targeting your actual growth surfaces (your competitor's pricing page, your buyer-intent forums) is often more valuable than generic web access.
+
+**Note.** This recognition only fires on the legacy fallback path. If your snapshot reports `capabilities` directly, those are authoritative — pp-* declarations don't override an explicit `webFetch: false`.

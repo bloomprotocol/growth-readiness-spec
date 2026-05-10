@@ -1,7 +1,7 @@
-# Growth Readiness Score — v0.2.0 Specification
+# Growth Readiness Score — v0.2.1 Specification
 
 **Status:** Active
-**Last updated:** 2026-05-08
+**Last updated:** 2026-05-10
 **Implementations:** [Bloom Protocol reference TS](./reference/scorer.ts), [bloomprotocol.ai hosted endpoint](https://bloomprotocol.ai/api/agent/setup-audit)
 
 ---
@@ -19,6 +19,8 @@ score = round( matched_capabilities / total_capabilities × 100 )
 ```
 
 Where `total_capabilities = 9` and `matched_capabilities` is the count of capabilities in `TARGET_PROFILE` that the agent's reported `CapabilityProfile` meets or exceeds.
+
+The formula has been stable since v0.2.0; v0.2.x versions evolve **detection rules** (how native runtime signals map to capability primitives) — not the formula itself. Detection rule changes are versioned to honor immutable-eval reproducibility.
 
 **Tier mapping (3-stage Pikmin evolution):**
 
@@ -62,6 +64,8 @@ Each first-class harness reports its native equivalent of each primitive. The sc
 - [`harnesses/codex.md`](./harnesses/codex.md)
 
 For runtimes not yet documented, the agent reports `runtime: "other"` and the scorer falls back to checking `declaredTools` / `declaredSkills` / `capabilities` directly with conservative defaults.
+
+**Printing Press CLIs (v0.2.1+).** Any tool id matching `pp-*` (the convention from [mvanhorn/cli-printing-press](https://github.com/mvanhorn/cli-printing-press)) satisfies the `webFetch` capability when the agent does not report `capabilities` directly. Printed CLIs are token-efficient structured fetchers for specific sites/APIs and install cleanly into Hermes / OpenClaw / Claude Code as of cli-printing-press PR #655.
 
 ## 5. Versioning + immutability
 

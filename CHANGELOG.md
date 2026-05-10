@@ -4,6 +4,24 @@ All notable changes to the Growth Readiness Score spec are documented here. The 
 
 ---
 
+## [v0.2.1] — 2026-05-10
+
+### Printing Press recognition
+
+[mvanhorn/cli-printing-press](https://github.com/mvanhorn/cli-printing-press) [PR #655](https://github.com/mvanhorn/cli-printing-press/pull/655) (merged 2026-05-07) shipped Hermes/OpenClaw frontmatter alignment, so printed CLIs install cleanly into our GTM-priority runtimes. v0.2.1 recognizes any `pp-*` declared tool id as a `webFetch` satisfier — each printed CLI is a structured, token-efficient fetcher for a specific site/API.
+
+**Strictly additive on top of v0.2.0.** Same input → score is `≥` its v0.2.0 score, never lower. Old reports stamped `v0.2.0` continue to use the frozen v0.2.0 detection rules.
+
+**Behavioral note.** Recognition only fires on the legacy fallback path (when the agent did not directly report `capabilities`). When the agent reports `capabilities` directly, those values are authoritative — `pp-*` tools are not used to upgrade an explicit `webFetch: false`.
+
+### Calibration anchors added
+
+- Hermes with only `pp-*` CLIs (no generic browser/http) gets `webFetch` credit.
+- Non-`pp-*` tools (e.g. `pep-tool`, `some-cli`) do not trigger pp recognition.
+- v0.2.1 score for any input is `≥` its v0.2.0 score (additivity invariant).
+
+---
+
 ## [v0.2.0] — 2026-04-29
 
 ### The cross-harness fairness pivot

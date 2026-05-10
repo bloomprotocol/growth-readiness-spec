@@ -1,4 +1,4 @@
-// Growth Readiness Score · v0.2.0 reference implementation
+// Growth Readiness Score · v0.2.1 reference implementation
 // ─────────────────────────────────────────────────────────
 //
 // Pure-function scorer. No storage, no network, no framework deps. Drop into
@@ -8,8 +8,14 @@
 //
 // Spec: ../SPEC.md
 // Per-harness detection rules: ../harnesses/<runtime>.md
+//
+// v0.2.1 (2026-05-10) is strictly additive on top of v0.2.0: it recognizes
+// Printing Press printed CLIs (mvanhorn/cli-printing-press) declared as
+// `pp-*` tool ids as webFetch satisfiers. PR #655 in cli-printing-press
+// (merged 2026-05-07) made printed CLIs install cleanly into Hermes /
+// OpenClaw, so this is honest detection for those runtimes.
 
-export const GROWTH_READINESS_VERSION = 'v0.2.0';
+export const GROWTH_READINESS_VERSION = 'v0.2.1';
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -217,8 +223,13 @@ export function deriveCapabilities(s: SetupSnapshot): CapabilityProfile {
   const webSearch = webSearchDeclared || isClaudeCode || isCursor || isCodex;
 
   // Web fetch — same logic, plus `browser` / `http` / `web_fetch`.
+  // v0.2.1 also recognizes Printing Press printed CLIs (`pp-*`) as
+  // webFetch satisfiers; each printed CLI is a structured fetcher for
+  // a specific site/API, more token-efficient than generic browser scraping.
+  const hasPrintedCli = s.declaredTools.some((t) => t.startsWith('pp-'));
   const webFetchDeclared =
-    has('browser') || has('web_fetch') || has('http') || webSearchDeclared;
+    has('browser') || has('web_fetch') || has('http') ||
+    webSearchDeclared || hasPrintedCli;
   const webFetch = webFetchDeclared || isClaudeCode || isCursor || isCodex;
 
   // Shell-or-equivalent — native for Claude Code, Codex, OpenClaw; gateway-up
