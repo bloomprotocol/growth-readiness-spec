@@ -92,6 +92,12 @@ Proof of real growth contribution is separate metadata:
 
 The reference scorer starts proof metadata at `unproven` because it does not connect to mission storage. Hosted Bloom implementations may enrich `proofStatus` from accepted missions, citations, or published artifacts, but must not make first-run mission history a prerequisite for the setup-readiness score.
 
+### 5.1 Verification (live probing)
+
+`capabilityEvidence.status` of `verified` requires the implementation to have observed the capability actually working — not just declared. Probes are defined per-runtime and have a strict 2-second timeout. The score formula treats `declared` and `verified` as equivalent (1 point each) to preserve immutable-eval; `verified` is a transparency upgrade on the display layer, not a score modifier.
+
+See [PROBING.md](./PROBING.md) for the canonical probe set per runtime, what is **not** probed (and why), and the conformance test for spec-conformant implementations.
+
 ## 6. Versioning + immutability
 
 Every score response carries `growthReadinessVersion`. Once a version is published, its scoring function is **frozen** — old reports stay reproducible. New scoring rules ship as new versions (`v0.2.0` → `v0.3.0`), never overwrites.
