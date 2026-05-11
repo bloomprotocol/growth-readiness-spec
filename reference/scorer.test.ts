@@ -95,6 +95,13 @@ describe('Hermes', () => {
     ex(r.gaps.find((g) => g.capability === 'subAgents')).toBeUndefined();
   });
 
+  test('delegate_task tool id counts as subAgents', () => {
+    const setup = { ...standard, declaredTools: [...standard.declaredTools, 'delegate_task'] };
+    const r = computeReadiness(setup);
+    ex(r.gaps.find((g) => g.capability === 'subAgents')).toBeUndefined();
+    ex(r.capabilities.subAgents).toBe(true);
+  });
+
   test('remediation copy never tells a Hermes user to "create a CLAUDE.md"', () => {
     const bare: SetupSnapshot = {
       runtime: 'hermes',
@@ -188,8 +195,23 @@ describe('Determinism', () => {
     ex(r1.axes).toEqual(r2.axes);
   });
 
-  test('report carries growthReadinessVersion v0.2.1', () => {
+  test('report carries growthReadinessVersion v0.2.2', () => {
     const r = computeReadiness(setup);
-    ex(r.growthReadinessVersion).toBe('v0.2.1');
+    ex(r.growthReadinessVersion).toBe('v0.2.2');
+  });
+
+  test('proof metadata starts unproven and does not gate readiness score', () => {
+    const r = computeReadiness({
+      runtime: 'hermes',
+      gatewayAvailable: true,
+      declaredTools: ['web_search', 'http', 'filesystem', 'delegate_task'],
+      declaredSkills: ['bloom-visibility'],
+      persistsContext: true,
+      claudeMdPresent: false,
+    });
+    ex(r.tier).toBe('Bloom');
+    ex(r.proofStatus.capabilityTier).toBe('Bloom-ready');
+    ex(r.proofStatus.proofTier).toBe('unproven');
+    ex(r.proofStatus.isProven).toBe(false);
   });
 });

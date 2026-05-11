@@ -3,7 +3,7 @@
 > A 2-minute setup audit that measures how ready an AI agent is to do growth/marketing work — not how smart its model is. Cross-harness fair: Claude Code, Hermes, OpenClaw, and Codex all scored against the same target capability profile.
 
 [![tests](https://github.com/bloomprotocol/growth-readiness-spec/actions/workflows/test.yml/badge.svg)](https://github.com/bloomprotocol/growth-readiness-spec/actions/workflows/test.yml)
-[![spec version](https://img.shields.io/badge/spec-v0.2.0-emerald)](./SPEC.md)
+[![spec version](https://img.shields.io/badge/spec-v0.2.2-emerald)](./SPEC.md)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 ---
@@ -18,6 +18,7 @@ It is the open methodology behind [bloomprotocol.ai/readiness.md](https://bloomp
 
 - **Inputs:** 9 capability primitives (web search, web fetch, file system R/W, structured LLM output, persistent memory, project context, sub-agents, shell-or-equivalent, Bloom skill installed).
 - **Output:** a 0–100 score, a tier (Sprout / Bud / Bloom), 3-axis breakdown (Insight / Create / Distribute), top 3 gaps, and a paste-back remediation prompt.
+- **Proof layer:** optional `proofStatus` metadata tracks accepted missions, citations, and artifacts separately. A new agent can be `Bloom-ready` before it has mission proof.
 - **Method:** structural checks only. No LLM-as-judge. Same eval contract as [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — versioned, immutable, deterministic.
 - **Scoring:** percent of `TARGET_PROFILE` capabilities matched. Cross-harness fair by construction.
 
@@ -65,8 +66,8 @@ npm test     # 8+ calibration anchors across all 4 first-class harnesses
 ```
 .
 ├── README.md            ← you are here
-├── SPEC.md              ← formal v0.2.0 capability primitives + scoring formula
-├── CHANGELOG.md         ← v0.1.0 (declaration-counting) → v0.2.0 (capability matching) pivot
+├── SPEC.md              ← formal v0.2.2 capability primitives + readiness/proof split
+├── CHANGELOG.md         ← immutable version history from v0.1.0 onward
 ├── LICENSE              ← MIT
 ├── reference/
 │   ├── scorer.ts        ← reference TypeScript implementation, no framework deps
@@ -96,9 +97,9 @@ submission overview, or [hackathon/DEMO.md](./hackathon/DEMO.md) for the
 
 ## Spec versioning
 
-GRS uses an immutable-eval contract: every report carries `growthReadinessVersion`, formula changes bump the version, old versions remain reproducible. The current spec is **v0.2.0**.
+GRS uses an immutable-eval contract: every report carries `growthReadinessVersion`, formula changes bump the version, old versions remain reproducible. The current spec is **v0.2.2**.
 
-The pivot from v0.1.0 (declaration-counting, biased toward Hermes-shape tool ids) to v0.2.0 (capability-primitive matching, cross-harness fair) is documented in [CHANGELOG.md](./CHANGELOG.md).
+The pivot from v0.1.0 (declaration-counting, biased toward Hermes-shape tool ids) to v0.2.0 (capability-primitive matching, cross-harness fair), plus v0.2.1/v0.2.2 additive detection updates, is documented in [CHANGELOG.md](./CHANGELOG.md).
 
 ## Contributing detection rules
 

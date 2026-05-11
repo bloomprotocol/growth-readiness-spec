@@ -1,4 +1,4 @@
-// Growth Readiness Score · v0.2.1 reference implementation
+// Growth Readiness Score · v0.2.2 reference implementation
 // ─────────────────────────────────────────────────────────
 //
 // Pure-function scorer. No storage, no network, no framework deps. Drop into
@@ -9,13 +9,11 @@
 // Spec: ../SPEC.md
 // Per-harness detection rules: ../harnesses/<runtime>.md
 //
-// v0.2.1 (2026-05-10) is strictly additive on top of v0.2.0: it recognizes
-// Printing Press printed CLIs (mvanhorn/cli-printing-press) declared as
-// `pp-*` tool ids as webFetch satisfiers. PR #655 in cli-printing-press
-// (merged 2026-05-07) made printed CLIs install cleanly into Hermes /
-// OpenClaw, so this is honest detection for those runtimes.
+// v0.2.2 (2026-05-12) keeps the same capability formula, recognizes
+// Hermes `delegate_task` as a sub-agent primitive, and separates setup
+// readiness from mission proof in report metadata.
 
-export const GROWTH_READINESS_VERSION = 'v0.2.1';
+export const GROWTH_READINESS_VERSION = 'v0.2.2';
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -73,6 +71,24 @@ export interface Gap {
   how: string;
 }
 
+export type CapabilityEvidenceStatus = 'declared' | 'verified' | 'missing';
+
+export type CapabilityEvidence = Record<keyof CapabilityProfile, {
+  status: CapabilityEvidenceStatus;
+  via?: string;
+}>;
+
+export interface ReadinessProofStatus {
+  capabilityTier: 'Sprout-ready' | 'Bud-ready' | 'Bloom-ready';
+  proofTier: 'unproven' | 'mission-active' | 'bloom-proven';
+  isProven: boolean;
+  acceptedMissionCount: number;
+  citationCount: number;
+  artifactCount: number;
+  summary: string;
+  nextProofStep: string;
+}
+
 export interface ReadinessReport {
   growthReadinessVersion: string;
   score: number;           // 0-100
@@ -82,6 +98,8 @@ export interface ReadinessReport {
   gaps: Gap[];
   topActions: string[];
   remediationPrompt: string;
+  capabilityEvidence: CapabilityEvidence;
+  proofStatus: ReadinessProofStatus;
 }
 
 // ── Target profile (the cross-harness scoring target) ───────────
@@ -182,7 +200,7 @@ const CAPABILITY_HELP: Record<keyof CapabilityProfile, CapabilityHelp> = {
     label: 'Sub-agent / parallel reasoning',
     why: 'Growth work parallelizes — one agent mining intents, one drafting copy, one validating schema. Without sub-agents you bottleneck through a single thread.',
     addInstruction:
-      'Claude Code: Task tool is native. Hermes: declare a `spawn` / `agent_spawn` tool in your gateway. Otherwise install a multi-agent orchestration MCP.',
+      'Claude Code: Task tool is native. Hermes: declare a `spawn`, `agent_spawn`, or `delegate_task` tool in your gateway. Otherwise install a multi-agent orchestration MCP.',
   },
   shellOrEquiv: {
     label: 'Shell exec or arbitrary-tool gateway',
@@ -244,9 +262,16 @@ export function deriveCapabilities(s: SetupSnapshot): CapabilityProfile {
   const fileSystemRW =
     isClaudeCode || isCodex || isCursor || isOpenclaw || fsDeclared;
 
-  // Sub-agents — Claude Code's Task tool is native. Other runtimes must
-  // explicitly declare a spawn tool; gateway-up alone isn't enough.
-  const spawnDeclared = has('spawn') || has('agent_spawn');
+  // Sub-agents — Claude Code's Task tool is native. Hermes commonly calls
+  // this primitive `delegate_task`; other orchestration layers may call it
+  // task/subagent/worker. Gateway-up alone isn't enough.
+  const spawnDeclared =
+    has('spawn') ||
+    has('agent_spawn') ||
+    has('delegate_task') ||
+    has('task') ||
+    has('subagent') ||
+    has('worker');
   const subAgents = isClaudeCode || spawnDeclared;
 
   // Structured LLM output — every capable harness has function-calling /
@@ -320,6 +345,33 @@ function scoreToTier(score: number): 'Sprout' | 'Bud' | 'Bloom' {
   if (score >= 80) return 'Bloom';
   if (score >= 40) return 'Bud';
   return 'Sprout';
+}
+
+function scoreToCapabilityTier(score: number): ReadinessProofStatus['capabilityTier'] {
+  return `${scoreToTier(score)}-ready` as ReadinessProofStatus['capabilityTier'];
+}
+
+function buildCapabilityEvidence(actual: CapabilityProfile): CapabilityEvidence {
+  const evidence = {} as CapabilityEvidence;
+  for (const key of Object.keys(TARGET_PROFILE) as (keyof CapabilityProfile)[]) {
+    evidence[key] = capabilityMatchesTarget(key, actual, TARGET_PROFILE)
+      ? { status: 'declared', via: 'setup snapshot' }
+      : { status: 'missing' };
+  }
+  return evidence;
+}
+
+function computeInitialProofStatus(score: number): ReadinessProofStatus {
+  return {
+    capabilityTier: scoreToCapabilityTier(score),
+    proofTier: 'unproven',
+    isProven: false,
+    acceptedMissionCount: 0,
+    citationCount: 0,
+    artifactCount: 0,
+    summary: 'This score measures setup readiness. Mission completions, citations, and artifacts are the separate proof layer.',
+    nextProofStep: 'Complete one visibility mission or publish one accepted artifact to move from unproven to mission-active.',
+  };
 }
 
 // ── Remediation prompt ───────────────────────────────────────────
@@ -427,5 +479,7 @@ export function computeReadiness(s: SetupSnapshot): ReadinessReport {
     gaps,
     topActions,
     remediationPrompt,
+    capabilityEvidence: buildCapabilityEvidence(capabilities),
+    proofStatus: computeInitialProofStatus(score),
   };
 }

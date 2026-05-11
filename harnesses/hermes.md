@@ -23,7 +23,7 @@ Map the response into `declaredTools` by extracting every `id`. If the probe tim
 | `llmStructured` | always `true` — Hermes routes structured-output calls through gateway |
 | `persistentMem` | always `cross_session` when `persistsContext: true` (Hermes built-in) |
 | `projectContext` | `persistsContext: true` — Hermes's built-in memory IS the project context surface; no equivalent of `CLAUDE.md` is needed |
-| `subAgents` | gateway has `spawn` or `agent_spawn` tool |
+| `subAgents` | gateway has `spawn`, `agent_spawn`, or `delegate_task` tool |
 | `shellOrEquiv` | `gatewayAvailable: true` — gateway IS the shell-equivalent |
 | `bloomSkillInstalled` | `declaredSkills` includes any `bloom-*` (typically `bloom-visibility`) |
 
@@ -67,7 +67,7 @@ async function probeHermes(): Promise<{
       llmStructured: true,
       persistentMem: 'cross_session',
       projectContext: true, // built-in memory carries project context
-      subAgents: has('spawn') || has('agent_spawn'),
+      subAgents: has('spawn') || has('agent_spawn') || has('delegate_task'),
       shellOrEquiv: gatewayAvailable,
       bloomSkillInstalled: false, // populated separately from declaredSkills
     },
@@ -79,6 +79,7 @@ async function probeHermes(): Promise<{
 
 - **Empty gateway is normal at first.** A fresh Hermes install often has zero tools registered. Score will be ~35–50% (Bud, low-end). Install at least `web_search` + `http` to get above 60%.
 - **`web_search` vs `web`.** Both are accepted by the v0.2.0+ scorer. `web_search` is the canonical Hermes name; `web` is the legacy short form some Hermes builds still use.
+- **`delegate_task` is delegation.** v0.2.2 treats `delegate_task` as a valid `subAgents` signal. The primitive is "can delegate/parallelize work", not "tool id literally says spawn".
 - **No `claudeMdPresent`.** Hermes never has a `CLAUDE.md` — the scorer credits `projectContext` based on `persistsContext` for Hermes specifically, so the file isn't needed.
 
 ## Printing Press printed CLIs (v0.2.1+)

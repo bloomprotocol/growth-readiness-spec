@@ -4,6 +4,30 @@ All notable changes to the Growth Readiness Score spec are documented here. The 
 
 ---
 
+## [v0.2.2] — 2026-05-12
+
+### Readiness/proof split
+
+v0.2.2 clarifies that the Growth Readiness Score is a setup-readiness signal, not a mission-performance score. The score and tier answer: "is this agent configured with the scaffolding needed for growth work?" They do not require prior mission completion, because first-run agents will naturally have no track record yet.
+
+Reports may now include:
+
+- `capabilityEvidence`: per-capability status of `missing`, `declared`, or `verified`.
+- `proofStatus`: separate proof metadata for accepted missions, citations, and artifacts.
+
+Hosted Bloom can enrich `proofStatus` from mission data, but `proofStatus` does not gate the headline GRS score. A new agent can be `Bloom-ready` and still `unproven`.
+
+### Hermes delegation recognition
+
+Hermes runtimes may expose delegation as `delegate_task` instead of `spawn`. v0.2.2 recognizes `delegate_task` as a valid `subAgents` primitive. The capability is delegation/parallel work, not the literal tool id spelling.
+
+### Calibration anchors added
+
+- Hermes with `delegate_task` gets `subAgents` credit.
+- Proof metadata starts as `unproven` in the reference scorer and does not lower a Bloom-ready setup.
+
+---
+
 ## [v0.2.1] — 2026-05-10
 
 ### Printing Press recognition
