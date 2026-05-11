@@ -1,6 +1,43 @@
 # Changelog
 
-All notable changes to the Growth Readiness Score spec are documented here. The spec follows immutable-eval semantics: published versions are frozen forever; new behavior ships as a new version.
+All notable changes to the Growth Readiness spec are documented here. The spec follows immutable-eval semantics: published versions are frozen forever; new behavior ships as a new version.
+
+---
+
+## [v0.2.3] — 2026-05-12
+
+### Readiness percentage + verification confidence
+
+v0.2.3 clarifies the UI language: the primary display value is
+`readinessPercent`, not a model-quality score. The legacy `score` field remains
+as an API alias for backwards compatibility.
+
+Reports now include `verificationSummary`:
+
+- `verifiedCapabilityCount`
+- `declaredOnlyCapabilityCount`
+- `missingCapabilityCount`
+- `verificationRatio`
+- `confidence`: `low`, `medium`, or `high`
+
+This fixes the remaining gameability critique without punishing first-run
+agents. A fake or unprobed agent can still report 100% setup readiness, but the
+report will show low verification confidence until hosted probes, trusted
+runtime defaults, or successful tool calls move capabilities from
+declaration-only to verified.
+
+The headline readiness formula is unchanged from v0.2.0:
+
+```
+readinessPercent = matched_capabilities / total_capabilities × 100
+```
+
+### Calibration anchors added
+
+- `readinessPercent` mirrors legacy `score`.
+- Declared-only Bloom-ready setups report low verification confidence.
+- Host-provided verified evidence upgrades confidence without changing the
+  readiness percentage.
 
 ---
 

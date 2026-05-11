@@ -1,4 +1,4 @@
-// Growth Readiness Score · v0.2.2 reference implementation
+// Growth Readiness · v0.2.3 reference implementation
 // ─────────────────────────────────────────────────────────
 //
 // Pure-function scorer. No storage, no network, no framework deps. Drop into
@@ -9,11 +9,11 @@
 // Spec: ../SPEC.md
 // Per-harness detection rules: ../harnesses/<runtime>.md
 //
-// v0.2.2 (2026-05-12) keeps the same capability formula, recognizes
-// Hermes `delegate_task` as a sub-agent primitive, and separates setup
-// readiness from mission proof in report metadata.
+// v0.2.3 (2026-05-12) keeps the same capability formula and adds an
+// evidence-confidence layer so declared-only high readiness percentages are clearly labeled
+// as lower-trust than probe-verified reports.
 
-export const GROWTH_READINESS_VERSION = 'v0.2.2';
+export const GROWTH_READINESS_VERSION = 'v0.2.3';
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -53,6 +53,9 @@ export interface SetupSnapshot {
   // when `capabilities` is absent, the scorer derives it from the legacy
   // fields above per the per-harness detection rules.
   capabilities?: CapabilityProfile;
+  // Optional host-provided evidence. Hosted Bloom can pass probe results here;
+  // the readiness formula remains unchanged, but the report can show confidence.
+  capabilityEvidence?: Partial<CapabilityEvidence>;
 }
 
 export type Axis = 'insight' | 'create' | 'distribute';
@@ -78,6 +81,16 @@ export type CapabilityEvidence = Record<keyof CapabilityProfile, {
   via?: string;
 }>;
 
+export interface VerificationSummary {
+  verifiedCapabilityCount: number;
+  declaredOnlyCapabilityCount: number;
+  missingCapabilityCount: number;
+  verificationRatio: number; // 0-100, matched capabilities only
+  confidence: 'low' | 'medium' | 'high';
+  summary: string;
+  nextVerificationStep: string;
+}
+
 export interface ReadinessProofStatus {
   capabilityTier: 'Sprout-ready' | 'Bud-ready' | 'Bloom-ready';
   proofTier: 'unproven' | 'mission-active' | 'bloom-proven';
@@ -91,7 +104,8 @@ export interface ReadinessProofStatus {
 
 export interface ReadinessReport {
   growthReadinessVersion: string;
-  score: number;           // 0-100
+  score: number;           // 0-100, legacy alias for readinessPercent
+  readinessPercent: number; // preferred display field
   tier: 'Sprout' | 'Bud' | 'Bloom';
   axes: Record<Axis, AxisResult>;
   capabilities: CapabilityProfile;
@@ -99,6 +113,7 @@ export interface ReadinessReport {
   topActions: string[];
   remediationPrompt: string;
   capabilityEvidence: CapabilityEvidence;
+  verificationSummary: VerificationSummary;
   proofStatus: ReadinessProofStatus;
 }
 
@@ -351,14 +366,61 @@ function scoreToCapabilityTier(score: number): ReadinessProofStatus['capabilityT
   return `${scoreToTier(score)}-ready` as ReadinessProofStatus['capabilityTier'];
 }
 
-function buildCapabilityEvidence(actual: CapabilityProfile): CapabilityEvidence {
+function buildCapabilityEvidence(
+  actual: CapabilityProfile,
+  reported?: Partial<CapabilityEvidence>,
+): CapabilityEvidence {
   const evidence = {} as CapabilityEvidence;
   for (const key of Object.keys(TARGET_PROFILE) as (keyof CapabilityProfile)[]) {
-    evidence[key] = capabilityMatchesTarget(key, actual, TARGET_PROFILE)
-      ? { status: 'declared', via: 'setup snapshot' }
-      : { status: 'missing' };
+    const matched = capabilityMatchesTarget(key, actual, TARGET_PROFILE);
+    const incoming = reported?.[key];
+
+    if (!matched) {
+      evidence[key] = { status: 'missing' };
+      continue;
+    }
+
+    evidence[key] = incoming?.status === 'verified'
+      ? { status: 'verified', via: incoming.via ?? 'host probe' }
+      : { status: 'declared', via: incoming?.via ?? 'setup snapshot' };
   }
   return evidence;
+}
+
+function summarizeVerification(evidence: CapabilityEvidence): VerificationSummary {
+  const values = Object.values(evidence);
+  const verifiedCapabilityCount = values.filter((e) => e.status === 'verified').length;
+  const declaredOnlyCapabilityCount = values.filter((e) => e.status === 'declared').length;
+  const missingCapabilityCount = values.filter((e) => e.status === 'missing').length;
+  const matchedCount = verifiedCapabilityCount + declaredOnlyCapabilityCount;
+  const verificationRatio = matchedCount === 0
+    ? 0
+    : Math.round((verifiedCapabilityCount / matchedCount) * 100);
+
+  const confidence: VerificationSummary['confidence'] =
+    verificationRatio >= 67 ? 'high' :
+    verificationRatio >= 34 ? 'medium' :
+    'low';
+
+  const summary =
+    confidence === 'high'
+      ? `${verifiedCapabilityCount}/${matchedCount} matched capabilities are verified by probes or trusted runtime defaults.`
+      : confidence === 'medium'
+        ? `${verifiedCapabilityCount}/${matchedCount} matched capabilities are verified; the rest are declaration-only.`
+        : `${declaredOnlyCapabilityCount}/${matchedCount} matched capabilities are declaration-only. Treat the readiness percentage as setup intent until probes or mission proof catch up.`;
+
+  return {
+    verifiedCapabilityCount,
+    declaredOnlyCapabilityCount,
+    missingCapabilityCount,
+    verificationRatio,
+    confidence,
+    summary,
+    nextVerificationStep:
+      declaredOnlyCapabilityCount > 0
+        ? 'Run the hosted readiness probe or complete one mission so Bloom can move key capabilities from declared to verified.'
+        : 'Complete one visibility mission to add proof beyond setup readiness.',
+  };
 }
 
 function computeInitialProofStatus(score: number): ReadinessProofStatus {
@@ -369,7 +431,7 @@ function computeInitialProofStatus(score: number): ReadinessProofStatus {
     acceptedMissionCount: 0,
     citationCount: 0,
     artifactCount: 0,
-    summary: 'This score measures setup readiness. Mission completions, citations, and artifacts are the separate proof layer.',
+    summary: 'This percentage measures setup readiness. Mission completions, citations, and artifacts are the separate proof layer.',
     nextProofStep: 'Complete one visibility mission or publish one accepted artifact to move from unproven to mission-active.',
   };
 }
@@ -382,7 +444,7 @@ export function generateRemediationPrompt(
 ): string {
   if (gaps.length === 0) {
     return [
-      `Your agent is fully growth-equipped (score ${context.score}/100).`,
+      `Your agent is fully growth-equipped (${context.score}% ready).`,
       `Run your first mission at https://bloomprotocol.ai/missions to start lifting your tribal score.`,
     ].join('\n');
   }
@@ -390,7 +452,7 @@ export function generateRemediationPrompt(
   const headerLines = [
     `# Bloom — agent self-upgrade prompt`,
     ``,
-    `Your agent scored ${context.score}/100 on Growth Readiness. ${gaps.length} capabilities are missing. Apply the steps below to lift the score, then re-run https://bloomprotocol.ai/readiness.md.`,
+    `Your agent is ${context.score}% ready for Growth Readiness. ${gaps.length} capabilities are missing. Apply the steps below to lift the readiness percentage, then re-run https://bloomprotocol.ai/readiness.md.`,
     ``,
     `Runtime: ${context.runtime}`,
   ];
@@ -418,7 +480,7 @@ export function generateRemediationPrompt(
     ``,
     `After applying the steps above:`,
     `1. Re-run the Growth Readiness scan: https://bloomprotocol.ai/readiness.md`,
-    `2. Compare the new score against this one.`,
+    `2. Compare the new readiness percentage against this one.`,
     `3. Once you reach Bud (40+) or Bloom (80+), accept your first mission at https://bloomprotocol.ai/missions.`,
   ].join('\n');
 
@@ -432,7 +494,7 @@ export function computeReadiness(s: SetupSnapshot): ReadinessReport {
   // from legacy fields per the per-harness detection rules.
   const capabilities = s.capabilities ?? deriveCapabilities(s);
 
-  // Score = % of TARGET_PROFILE matched.
+  // Readiness percentage = % of TARGET_PROFILE matched.
   const totalCaps = Object.keys(TARGET_PROFILE).length;
   let matched = 0;
   for (const key of Object.keys(TARGET_PROFILE) as (keyof CapabilityProfile)[]) {
@@ -470,16 +532,21 @@ export function computeReadiness(s: SetupSnapshot): ReadinessReport {
     runtime: s.runtime,
   });
 
+  const capabilityEvidence = buildCapabilityEvidence(capabilities, s.capabilityEvidence);
+  const verificationSummary = summarizeVerification(capabilityEvidence);
+
   return {
     growthReadinessVersion: GROWTH_READINESS_VERSION,
     score,
+    readinessPercent: score,
     tier,
     axes,
     capabilities,
     gaps,
     topActions,
     remediationPrompt,
-    capabilityEvidence: buildCapabilityEvidence(capabilities),
+    capabilityEvidence,
+    verificationSummary,
     proofStatus: computeInitialProofStatus(score),
   };
 }

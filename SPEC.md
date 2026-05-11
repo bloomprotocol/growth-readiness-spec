@@ -1,4 +1,4 @@
-# Growth Readiness Score — v0.2.2 Specification
+# Growth Readiness — v0.2.3 Specification
 
 **Status:** Active
 **Last updated:** 2026-05-12
@@ -10,23 +10,25 @@
 
 Measure how ready an AI agent is to do **growth/marketing work** on behalf of a user. Specifically: does the agent have the **scaffolding** (tools, skills, memory, project context) needed to discover, create, and distribute artifacts that lift a product's AI visibility?
 
-This is **not a model benchmark.** Claude, GPT-4, Gemini, and Hermes all score the same on equivalent setups — what varies is what's plugged into the runtime.
+This is **not a model benchmark.** Claude, GPT-4, Gemini, and Hermes all report the same readiness on equivalent setups — what varies is what's plugged into the runtime.
 
-It is also **not a mission-performance score.** A brand-new agent can be `Bloom-ready` before completing any mission. Mission completions, citations, and published artifacts belong to the proof layer, not the setup-readiness score.
+It is also **not a mission-performance score.** A brand-new agent can be `Bloom-ready` before completing any mission. Mission completions, citations, and published artifacts belong to the proof layer, not the setup-readiness percentage.
 
-## 2. Scoring contract
+## 2. Readiness percentage contract
 
 ```
-score = round( matched_capabilities / total_capabilities × 100 )
+readinessPercent = round( matched_capabilities / total_capabilities × 100 )
 ```
 
 Where `total_capabilities = 9` and `matched_capabilities` is the count of capabilities in `TARGET_PROFILE` that the agent's reported `CapabilityProfile` meets or exceeds.
+
+`score` remains a backward-compatible API alias for `readinessPercent`. New UI should display the percentage as setup readiness, not as a model-quality score or leaderboard rank.
 
 The formula has been stable since v0.2.0; v0.2.x versions evolve **detection rules** (how native runtime signals map to capability primitives) — not the formula itself. Detection rule changes are versioned to honor immutable-eval reproducibility.
 
 **Tier mapping (3-stage Pikmin evolution):**
 
-| Score | Tier   | Description |
+| Readiness | Tier   | Description |
 |-------|--------|-------------|
 | 0–39  | Sprout | Foundations only — agent is missing key setup pieces |
 | 40–79 | Bud    | Operational — agent can run parts of a visibility loop with some manual help |
@@ -34,7 +36,7 @@ The formula has been stable since v0.2.0; v0.2.x versions evolve **detection rul
 
 ## 3. Capability primitives (v0.2.0)
 
-Nine capabilities. Each is either a boolean or an ordinal level. The score is structural — no LLM judging.
+Nine capabilities. Each is either a boolean or an ordinal level. Readiness is structural — no LLM judging.
 
 | Capability | Type | Target | Axis |
 |---|---|---|---|
@@ -73,7 +75,7 @@ For runtimes not yet documented, the agent reports `runtime: "other"` and the sc
 
 ## 5. Readiness vs proof
 
-The headline score and tier describe **configuration readiness**:
+The headline readiness percentage and tier describe **configuration readiness**:
 
 - `Sprout-ready`
 - `Bud-ready`
@@ -84,29 +86,38 @@ Proof of real growth contribution is separate metadata:
 | Field | Meaning |
 |---|---|
 | `capabilityEvidence` | For each primitive, whether it is `missing`, `declared`, or `verified` by the reporting flow |
+| `verificationSummary` | Aggregates verified vs declared-only matched capabilities into a display confidence (`low`, `medium`, `high`) |
 | `proofStatus.capabilityTier` | The setup tier with a `-ready` suffix |
 | `proofStatus.proofTier` | `unproven`, `mission-active`, or `bloom-proven` |
 | `proofStatus.acceptedMissionCount` | Accepted missions, when the host product has that data |
 | `proofStatus.citationCount` | Citations earned, when known |
 | `proofStatus.artifactCount` | Published artifacts, when known |
 
-The reference scorer starts proof metadata at `unproven` because it does not connect to mission storage. Hosted Bloom implementations may enrich `proofStatus` from accepted missions, citations, or published artifacts, but must not make first-run mission history a prerequisite for the setup-readiness score.
+The reference scorer starts proof metadata at `unproven` because it does not connect to mission storage. Hosted Bloom implementations may enrich `proofStatus` from accepted missions, citations, or published artifacts, but must not make first-run mission history a prerequisite for the setup-readiness percentage.
 
 ### 5.1 Verification (live probing)
 
-`capabilityEvidence.status` of `verified` requires the implementation to have observed the capability actually working — not just declared. Probes are defined per-runtime and have a strict 2-second timeout. The score formula treats `declared` and `verified` as equivalent (1 point each) to preserve immutable-eval; `verified` is a transparency upgrade on the display layer, not a score modifier.
+`capabilityEvidence.status` of `verified` requires the implementation to have observed the capability actually working — not just declared. Probes are defined per-runtime and have a strict 2-second timeout. The readiness percentage treats `declared` and `verified` as equivalent (1 point each) to preserve immutable-eval; `verified` is a confidence upgrade on the display layer, not a percentage modifier.
+
+`verificationSummary` makes gameability visible without punishing first-run agents:
+
+- `confidence: "low"` — most matched capabilities are declaration-only.
+- `confidence: "medium"` — some matched capabilities are verified.
+- `confidence: "high"` — most matched capabilities are verified by probes, trusted runtime defaults, or recent successful tool calls.
+
+A report can therefore say: `89% ready · low verification confidence`. That is the honest interpretation of a highly equipped but not-yet-probed setup.
 
 See [PROBING.md](./PROBING.md) for the canonical probe set per runtime, what is **not** probed (and why), and the conformance test for spec-conformant implementations.
 
 ## 6. Versioning + immutability
 
-Every score response carries `growthReadinessVersion`. Once a version is published, its scoring function is **frozen** — old reports stay reproducible. New scoring rules ship as new versions (`v0.2.0` → `v0.3.0`), never overwrites.
+Every readiness response carries `growthReadinessVersion`. Once a version is published, its readiness function is **frozen** — old reports stay reproducible. New readiness rules ship as new versions (`v0.2.0` → `v0.3.0`), never overwrites.
 
-The reference implementation registers all known versions in a `SCORERS` map. Old versions can still be invoked explicitly via `computeReadiness(snapshot, ..., { version: 'v0.1.0' })`.
+The reference implementation preserves the old `score` field as a compatibility alias. Old reports stay reproducible by their stored `growthReadinessVersion`.
 
 ## 7. Signature
 
-Every report carries a signature: `${version}:${hmac.slice(0, 16)}`. The HMAC binds the score to the exact input snapshot — clients can verify a report wasn't tampered with after the fact.
+Every report carries a signature: `${version}:${hmac.slice(0, 16)}`. The HMAC binds the readiness report to the exact input snapshot — clients can verify a report wasn't tampered with after the fact.
 
 The HMAC key is server-side only (Bloom Protocol holds the production key). Forks can swap the key for their own deployment.
 

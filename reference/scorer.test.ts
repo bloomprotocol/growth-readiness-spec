@@ -1,7 +1,7 @@
-// Calibration anchors for the Growth Readiness Score reference scorer.
+// Calibration anchors for the Growth Readiness reference implementation.
 //
 // These tests pin cross-harness fairness invariants — same setup quality
-// must score similarly across runtimes. If you change scorer.ts, these tests
+// must report similar readiness across runtimes. If you change scorer.ts, these tests
 // will tell you whether you broke the contract.
 //
 // Run with: npm test
@@ -195,12 +195,13 @@ describe('Determinism', () => {
     ex(r1.axes).toEqual(r2.axes);
   });
 
-  test('report carries growthReadinessVersion v0.2.2', () => {
+  test('report carries growthReadinessVersion v0.2.3', () => {
     const r = computeReadiness(setup);
-    ex(r.growthReadinessVersion).toBe('v0.2.2');
+    ex(r.growthReadinessVersion).toBe('v0.2.3');
+    ex(r.readinessPercent).toBe(r.score);
   });
 
-  test('proof metadata starts unproven and does not gate readiness score', () => {
+  test('proof metadata starts unproven and does not gate readiness percentage', () => {
     const r = computeReadiness({
       runtime: 'hermes',
       gatewayAvailable: true,
@@ -213,5 +214,47 @@ describe('Determinism', () => {
     ex(r.proofStatus.capabilityTier).toBe('Bloom-ready');
     ex(r.proofStatus.proofTier).toBe('unproven');
     ex(r.proofStatus.isProven).toBe(false);
+  });
+
+  test('declared-only Bloom-ready setup keeps percentage but reports low verification confidence', () => {
+    const r = computeReadiness({
+      runtime: 'hermes',
+      gatewayAvailable: true,
+      declaredTools: ['web_search', 'http', 'filesystem', 'delegate_task'],
+      declaredSkills: ['bloom-visibility'],
+      persistsContext: true,
+      claudeMdPresent: false,
+    });
+    ex(r.readinessPercent).toBe(r.score);
+    ex(r.tier).toBe('Bloom');
+    ex(r.verificationSummary.confidence).toBe('low');
+    ex(r.verificationSummary.declaredOnlyCapabilityCount).toBeGreaterThanOrEqual(1);
+    ex(r.verificationSummary.verificationRatio).toBe(0);
+  });
+
+  test('host-provided verified evidence upgrades confidence without changing readiness percentage', () => {
+    const r = computeReadiness({
+      runtime: 'hermes',
+      gatewayAvailable: true,
+      declaredTools: ['web_search', 'http', 'filesystem', 'delegate_task'],
+      declaredSkills: ['bloom-visibility'],
+      persistsContext: true,
+      claudeMdPresent: false,
+      capabilityEvidence: {
+        webSearch: { status: 'verified', via: 'gateway live probe' },
+        webFetch: { status: 'verified', via: 'gateway live probe' },
+        fileSystemRW: { status: 'verified', via: 'gateway tool list' },
+        llmStructured: { status: 'verified', via: 'runtime default' },
+        persistentMem: { status: 'verified', via: 'runtime default' },
+        projectContext: { status: 'verified', via: 'runtime default' },
+        subAgents: { status: 'verified', via: 'gateway live probe' },
+        shellOrEquiv: { status: 'verified', via: 'gateway tool list' },
+        bloomSkillInstalled: { status: 'verified', via: 'agent registry' },
+      },
+    });
+    ex(r.score).toBe(r.readinessPercent);
+    ex(r.tier).toBe('Bloom');
+    ex(r.verificationSummary.confidence).toBe('high');
+    ex(r.verificationSummary.verificationRatio).toBe(100);
   });
 });

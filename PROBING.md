@@ -12,17 +12,19 @@ Every capability in `CapabilityProfile` carries one of three statuses in `capabi
 
 | Status | Meaning |
 |---|---|
-| `missing` | Capability is absent. No tool, no skill, no native runtime support. Counts as 0 toward the score. |
-| `declared` | The agent **told us** it has this capability (`declaredTools` / `declaredSkills` / `capabilities`), and the harness-detection rules accept the claim. Counts as 1 toward the score but is the **lower-trust** signal. |
-| `verified` | Bloom (or the spec-conformant implementation) **observed the capability actually working** — either via a live probe or a recent successful tool call recorded against the agent's apiKey. Counts as 1 toward the score and is the **higher-trust** signal. |
+| `missing` | Capability is absent. No tool, no skill, no native runtime support. Counts as 0 toward readiness. |
+| `declared` | The agent **told us** it has this capability (`declaredTools` / `declaredSkills` / `capabilities`), and the harness-detection rules accept the claim. Counts as 1 toward readiness but is the **lower-trust** signal. |
+| `verified` | Bloom (or the spec-conformant implementation) **observed the capability actually working** — either via a live probe or a recent successful tool call recorded against the agent's apiKey. Counts as 1 toward readiness and is the **higher-trust** signal. |
 
-The score formula treats `declared` and `verified` equivalently — both = 1. The reason is immutable-eval discipline: the same input must produce the same score forever, and probing introduces non-determinism (gateway might be down, BE might be slow). Verification ratchets the *display* without changing the *score*, so agents see "you scored 78, of which 5 caps are verified and 4 are declared-only" and operators know which signal to weight.
+The readiness formula treats `declared` and `verified` equivalently — both = 1. The reason is immutable-eval discipline: the same input must produce the same readiness percentage forever, and probing introduces non-determinism (gateway might be down, BE might be slow). Verification ratchets the *display* without changing the percentage, so agents see "78% ready, 5 caps verified, 4 declaration-only" and operators know which signal to weight.
+
+Reports also include `verificationSummary`, which aggregates the evidence into `confidence: "low" | "medium" | "high"`. A declared-only 100% report is still 100% ready in the setup sense, but it displays as low confidence until probes or successful tool calls verify the claims.
 
 This is intentional: **verification is not a gate, it's a transparency layer**.
 
 ---
 
-## 2. What gets probed today (v0.2.2)
+## 2. What gets probed today (v0.2.3)
 
 The reference scorer in this repo is structural-only — it does not call out to live runtimes. Hosted implementations (e.g. `bloomprotocol.ai/api/agent/setup-audit`) layer probes on top. The probes are listed here as the **canonical set**; any spec-conformant host should implement at most this set (more is fine; less is fine; mismatched semantics are not).
 
@@ -109,14 +111,14 @@ Honesty about negative space matters more than the probe list itself.
 
 | NOT probed | Why |
 |---|---|
-| Output quality of the artifacts an agent produces (FAQ correctness, schema validity, mention diversity) | Not in scope of GRS. This is what **missions** measure. The score answers "is the plumbing there?", missions answer "does the work ship?". The split is intentional — see § Readiness/proof split in CHANGELOG. |
+| Output quality of the artifacts an agent produces (FAQ correctness, schema validity, mention diversity) | Not in scope of GRS. This is what **missions** measure. The readiness percentage answers "is the plumbing there?", missions answer "does the work ship?". The split is intentional — see § Readiness/proof split in CHANGELOG. |
 | Latency / throughput of the agent's calls | Cap is "exists and works", not "exists and works fast." |
 | Cost per call / token economics | Not capability-relevant. |
-| Specific model identity ("are you actually Claude Sonnet 4 or Haiku") | GRS is explicitly cross-model fair — the same setup scores the same regardless of which LLM is plugged in. |
+| Specific model identity ("are you actually Claude Sonnet 4 or Haiku") | GRS is explicitly cross-model fair — the same setup reports the same readiness regardless of which LLM is plugged in. |
 | Filesystem writes (live probe) | Invasive — writing to an operator's machine without consent is a non-starter. Deferred until a sandbox path is published. |
 | Shell exec (live probe) | Security risk — arbitrary command execution probe is a foot-cannon. |
 
-If you need any of these signals, layer them on top as a separate score (e.g. "Bloom Mission Performance Score") and keep GRS as the setup baseline.
+If you need any of these signals, layer them on top as a separate mission-performance metric and keep GRS as the setup baseline.
 
 ---
 
@@ -126,15 +128,16 @@ A spec-conformant implementation MUST:
 
 1. Accept any of the runtimes in § 2 and produce a `CapabilityProfile` per the rules in that section.
 2. Emit `capabilityEvidence` with `declared` / `verified` / `missing` for every capability.
-3. Treat `declared` and `verified` as equivalent for **score arithmetic** (immutable-eval).
+3. Treat `declared` and `verified` as equivalent for **readiness arithmetic** (immutable-eval).
 4. Recognize `delegate_task` as a valid `subAgents` signal in Hermes.
-5. Default proof metadata (`proofStatus`) to `unproven` when not connected to mission data — and explicitly NOT use proof state to gate the headline score.
+5. Default proof metadata (`proofStatus`) to `unproven` when not connected to mission data — and explicitly NOT use proof state to gate the headline readiness percentage.
+6. Emit `verificationSummary` so high-percentage declared-only reports are visibly lower-confidence than high-percentage verified reports.
 
 The reference scorer in [`reference/scorer.ts`](./reference/scorer.ts) is conformant. Run `npm test` in `reference/` for the test suite.
 
 ---
 
-## 5. Roadmap (not yet in v0.2.2)
+## 5. Roadmap (not yet in v0.2.3)
 
 These are honest signals the GRS critique called out as missing. Tracked here so a future spec version can land them without surprise:
 
@@ -142,10 +145,10 @@ These are honest signals the GRS critique called out as missing. Tracked here so
 |---|---|
 | Live `webSearch` call | Hermes-specific today (gateway probe). Generalize via a "challenge token" the agent fetches and reports back. |
 | Live `subAgents` call | Same pattern — issue a challenge, the agent must delegate to itself or a sub-agent and report the round-trip. |
-| Output-quality grading | An agent that scores 80+ is asked to produce a sample `llms.txt` + a `FAQPage` JSON-LD blob; a structural validator grades correctness. Not a model-quality test — a deterministic schema check. |
+| Output-quality grading | An agent that reaches 80%+ readiness is asked to produce a sample `llms.txt` + a `FAQPage` JSON-LD blob; a structural validator grades correctness. Not a model-quality test — a deterministic schema check. |
 | Longitudinal trend | Score history fan-out: if your tribe peers improved 12% after weekly visibility loops and you did not, surface the gap. |
 
-These are **roadmap, not commitments**. Anyone implementing should still ship v0.2.2 first.
+These are **roadmap, not commitments**. Anyone implementing should still ship v0.2.3 first.
 
 ---
 
@@ -163,6 +166,7 @@ These are **roadmap, not commitments**. Anyone implementing should still ship v0
 
 ## 7. Version history
 
+- **v0.2.3** (2026-05-12) — Adds `readinessPercent` as the preferred display field and `verificationSummary` confidence so declared-only high-readiness reports are visibly lower-trust without changing immutable readiness arithmetic.
 - **v0.2.2** (2026-05-12) — First publication of PROBING.md. Recognizes `delegate_task` for Hermes subAgents. Adds `capabilityEvidence` and `proofStatus` to the report shape. Documents approval-gated runtime preflight expectations.
 - **v0.2.1** — `pp-*` (Printing Press CLI) tools count as `webFetch` satisfiers.
 - **v0.2.0** — Cross-harness capability-primitive matching (replaces v0.1.0's declaration-counting).

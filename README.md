@@ -1,27 +1,27 @@
-# Growth Readiness Score — Bloom Protocol
+# Growth Readiness — Bloom Protocol
 
-> A 2-minute setup audit that measures how ready an AI agent is to do growth/marketing work — not how smart its model is. Cross-harness fair: Claude Code, Hermes, OpenClaw, and Codex all scored against the same target capability profile.
+> A 2-minute setup audit that measures how ready an AI agent is to do growth/marketing work — not how smart its model is. Cross-harness fair: Claude Code, Hermes, OpenClaw, and Codex all report readiness against the same target capability profile.
 
 [![tests](https://github.com/bloomprotocol/growth-readiness-spec/actions/workflows/test.yml/badge.svg)](https://github.com/bloomprotocol/growth-readiness-spec/actions/workflows/test.yml)
-[![spec version](https://img.shields.io/badge/spec-v0.2.2-emerald)](./SPEC.md)
+[![spec version](https://img.shields.io/badge/spec-v0.2.3-emerald)](./SPEC.md)
 [![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 ---
 
 ## What this is
 
-Growth Readiness Score (GRS) is an open methodology for evaluating an agent's **growth scaffolding** — the tools, skills, and memory configuration around the model. It is **not** a model benchmark. Claude Sonnet, GPT-4, and Gemini all start at the same baseline; what varies is what's plugged into them.
+Growth Readiness is an open methodology for evaluating an agent's **growth scaffolding** — the tools, skills, and memory configuration around the model. It reports a readiness percentage, not a model benchmark score. Claude Sonnet, GPT-4, and Gemini all start at the same baseline; what varies is what's plugged into them.
 
 It is the open methodology behind [bloomprotocol.ai/readiness.md](https://bloomprotocol.ai/readiness.md). Anyone can implement it, fork it, or contribute detection rules for new harnesses.
 
 ## Quick read
 
 - **Inputs:** 9 capability primitives (web search, web fetch, file system R/W, structured LLM output, persistent memory, project context, sub-agents, shell-or-equivalent, Bloom skill installed).
-- **Output:** a 0–100 score, a tier (Sprout / Bud / Bloom), 3-axis breakdown (Insight / Create / Distribute), top 3 gaps, and a paste-back remediation prompt.
+- **Output:** a 0–100 readiness percentage, a tier (Sprout / Bud / Bloom), 3-axis breakdown (Insight / Create / Distribute), top 3 gaps, and a paste-back remediation prompt.
 - **Proof layer:** optional `proofStatus` metadata tracks accepted missions, citations, and artifacts separately. A new agent can be `Bloom-ready` before it has mission proof.
-- **Evidence layer:** every capability is tagged `declared` / `verified` / `missing` in the report's `capabilityEvidence`. See [PROBING.md](./PROBING.md) for exactly what hosted Bloom probes live vs. trusts on declaration.
+- **Evidence layer:** every capability is tagged `declared` / `verified` / `missing` in the report's `capabilityEvidence`, plus `verificationSummary` labels confidence as `low` / `medium` / `high`. A 100% declared-only agent is visibly lower-trust than a 100% verified agent.
 - **Method:** structural checks only. No LLM-as-judge. Same eval contract as [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — versioned, immutable, deterministic.
-- **Scoring:** percent of `TARGET_PROFILE` capabilities matched. Cross-harness fair by construction.
+- **Readiness math:** percent of `TARGET_PROFILE` capabilities matched. Cross-harness fair by construction. `score` remains a legacy API alias for `readinessPercent`.
 
 ## Supported runtimes (first-class)
 
@@ -32,7 +32,7 @@ It is the open methodology behind [bloomprotocol.ai/readiness.md](https://bloomp
 | OpenClaw | reads ClawHub registry manifest | community-maintained detection rules |
 | Codex CLI | reads `instructions.md` / `.codex/context.md` + function declarations | function-calling native |
 
-Other agents (Cursor, Manus, Gemini, custom) work via `runtime: "other"` — they still get a fair score; they just don't get the runtime-specific shortcuts.
+Other agents (Cursor, Manus, Gemini, custom) work via `runtime: "other"` — they still get a fair readiness percentage; they just don't get the runtime-specific shortcuts.
 
 ## Run it on your own agent
 
@@ -69,10 +69,10 @@ curl -X POST https://bloomprotocol.ai/api/agent/setup-audit \
   -H 'Authorization: Bearer bk_xxx' \
   -H 'Content-Type: application/json' \
   -d @snapshot.json
-# → score, tier, gaps, remediationPrompt
+# → readinessPercent, tier, gaps, verificationSummary, remediationPrompt
 ```
 
-Wallets are outside the Growth Readiness score. Bind or provision a payout
+Wallets are outside the Growth Readiness percentage. Bind or provision a payout
 wallet only when the agent opts into funded USDC missions; evaluators can run
 the readiness loop without wallet friction.
 
@@ -90,7 +90,7 @@ npm test     # 8+ calibration anchors across all 4 first-class harnesses
 ```
 .
 ├── README.md            ← you are here
-├── SPEC.md              ← formal v0.2.2 capability primitives + readiness/proof split
+├── SPEC.md              ← formal v0.2.3 capability primitives + readiness/proof/confidence split
 ├── PROBING.md           ← what's verified live vs declared-only (closes the gameability gap)
 ├── CHANGELOG.md         ← immutable version history from v0.1.0 onward
 ├── LICENSE              ← MIT
@@ -122,9 +122,9 @@ submission overview, or [hackathon/DEMO.md](./hackathon/DEMO.md) for the
 
 ## Spec versioning
 
-GRS uses an immutable-eval contract: every report carries `growthReadinessVersion`, formula changes bump the version, old versions remain reproducible. The current spec is **v0.2.2**.
+GRS uses an immutable-eval contract: every report carries `growthReadinessVersion`, formula changes bump the version, old versions remain reproducible. The current spec is **v0.2.3**.
 
-The pivot from v0.1.0 (declaration-counting, biased toward Hermes-shape tool ids) to v0.2.0 (capability-primitive matching, cross-harness fair), plus v0.2.1/v0.2.2 additive detection updates, is documented in [CHANGELOG.md](./CHANGELOG.md).
+The pivot from v0.1.0 (declaration-counting, biased toward Hermes-shape tool ids) to v0.2.0 (capability-primitive matching, cross-harness fair), plus v0.2.1-v0.2.3 additive detection and evidence updates, is documented in [CHANGELOG.md](./CHANGELOG.md).
 
 ## Contributing detection rules
 
