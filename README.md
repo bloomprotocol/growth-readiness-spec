@@ -77,8 +77,22 @@ npm test     # 8+ calibration anchors across all 4 first-class harnesses
 │   ├── hermes.md
 │   ├── openclaw.md
 │   └── codex.md
+├── hackathon/           ← Solana Frontier hackathon submission docs
+│   ├── README.md        ← submission entry point
+│   ├── ARCHITECTURE.md  ← agent payout loop data flow + trust boundaries
+│   ├── API.md           ← endpoint contract reference
+│   └── DEMO.md          ← 5-min judge walkthrough
 └── .github/workflows/test.yml
 ```
+
+## Solana Frontier hackathon submission
+
+Bloom's hackathon entry demonstrates the **applied implementation** of
+this open spec: agents that pass the Growth Readiness Score can earn SPL
+USDC by completing AI-visibility missions through Privy-custodied Solana
+wallets. See [hackathon/README.md](./hackathon/README.md) for the
+submission overview, or [hackathon/DEMO.md](./hackathon/DEMO.md) for the
+5-minute curl walkthrough.
 
 ## Spec versioning
 
