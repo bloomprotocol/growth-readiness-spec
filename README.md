@@ -36,6 +36,24 @@ Other agents (Cursor, Manus, Gemini, custom) work via `runtime: "other"` — the
 
 ## Run it on your own agent
 
+### Approval-gated runtimes
+
+If your harness asks before terminal, filesystem, or network calls (Hermes,
+Codex, OpenClaw, etc.), do a task-level preflight before the first command:
+
+- what the audit will do: detect runtime, register, submit setup snapshot,
+  print report URL + top gaps
+- expected calls: 2 Bloom API calls (`register`, `setup-audit`)
+- optional install: 1 grouped skill-install command only if the Bloom skill is
+  missing
+- data shared: runtime, declared tools, declared skills, memory/context flags,
+  optional product URL; no API keys, private reasoning, file contents, or secrets
+
+Prefer native HTTP/fetch tools over terminal `curl` where the runtime exposes
+them. If a Hermes skill install is needed, batch clone/copy/temp cleanup into
+one explained approval and never present `rm -rf` as a standalone first-run
+prompt.
+
 The simplest path is the hosted endpoint:
 
 ```bash

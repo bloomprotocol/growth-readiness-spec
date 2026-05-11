@@ -4,6 +4,11 @@
 
 ## Gateway probe
 
+Before the first probe in an approval-gated Hermes session, show a task-level
+preflight. The operator should know the audit will probe the gateway, register
+with Bloom, submit the setup snapshot, and optionally install the Bloom skill if
+missing. Do not begin with an isolated terminal prompt.
+
 Every detection step starts with the Tool Gateway. Read the URL from `HERMES_GATEWAY_URL` env var (fallback: `http://localhost:8765`). Probe with a 2-second timeout:
 
 ```
@@ -77,6 +82,11 @@ async function probeHermes(): Promise<{
 
 ## Common gotchas
 
+- **Approvals should be task-level.** Hermes may ask before terminal or network
+  calls. Show the operator the full command/API plan first, then request
+  approval. If installing `bloom-visibility`, batch clone/copy/temp cleanup into
+  one explained approval and never show `rm -rf` as a standalone first-run
+  decision.
 - **Empty gateway is normal at first.** A fresh Hermes install often has zero tools registered. Score will be ~35–50% (Bud, low-end). Install at least `web_search` + `http` to get above 60%.
 - **`web_search` vs `web`.** Both are accepted by the v0.2.0+ scorer. `web_search` is the canonical Hermes name; `web` is the legacy short form some Hermes builds still use.
 - **`delegate_task` is delegation.** v0.2.2 treats `delegate_task` as a valid `subAgents` signal. The primitive is "can delegate/parallelize work", not "tool id literally says spawn".

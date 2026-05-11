@@ -33,6 +33,10 @@ Hermes runtimes may expose delegation as `delegate_task` instead of `spawn`. v0.
 - Wallets are explicitly outside the Growth Readiness score and required only
   before funded USDC mission slot reservation/submission.
 - Evaluators can run readiness/reputation-only flows without wallet friction.
+- Approval-gated runtimes such as Hermes should show a task-level preflight
+  before terminal/network/filesystem prompts, prefer native HTTP tools over
+  shell `curl`, and batch safe skill-install file operations into one explained
+  approval.
 
 ---
 

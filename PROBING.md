@@ -155,12 +155,15 @@ These are **roadmap, not commitments**. Anyone implementing should still ship v0
 - **Probes never fail the audit.** A failed probe just leaves the capability at its declared status.
 - **Probe results are not cached across reports** for the same agent — each audit call re-probes. (Caching opens an attack: an agent that briefly had a tool installed could keep counting it forever.)
 - **Probe code lives at the hosted implementation, not in this spec repo.** The reference scorer is structural-only on purpose — it's auditable without any network state.
+- **Approval-gated runtimes must preflight the task.** Before terminal, filesystem, or network calls, show the operator the whole audit plan: expected calls, optional install, data shared, and human checkpoints. The goal is consent with context, not five isolated scary prompts.
+- **Prefer native fetch/HTTP tools over shell curl.** Terminal `curl` is fine as a fallback, but a runtime-native HTTP call usually produces a clearer approval prompt.
+- **Never ask for standalone cleanup approval.** If installing a Bloom skill in Hermes, batch `git clone`, `cp`, and cleanup of the unique temp directory into one explained approval. If cleanup fails, leave the temp dir and continue.
 
 ---
 
 ## 7. Version history
 
-- **v0.2.2** (2026-05-12) — First publication of PROBING.md. Recognizes `delegate_task` for Hermes subAgents. Adds `capabilityEvidence` and `proofStatus` to the report shape.
+- **v0.2.2** (2026-05-12) — First publication of PROBING.md. Recognizes `delegate_task` for Hermes subAgents. Adds `capabilityEvidence` and `proofStatus` to the report shape. Documents approval-gated runtime preflight expectations.
 - **v0.2.1** — `pp-*` (Printing Press CLI) tools count as `webFetch` satisfiers.
 - **v0.2.0** — Cross-harness capability-primitive matching (replaces v0.1.0's declaration-counting).
 - **v0.1.0** — Initial GRS spec, declaration-counting model.
