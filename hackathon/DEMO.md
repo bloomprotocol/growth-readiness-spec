@@ -149,7 +149,7 @@ My product is: <one line about your product>
 
 The agent will:
 - Explain the task plan before any terminal/network/filesystem prompt in
-  approval-gated runtimes like Hermes
+  approval-gated runtimes like Hermes, Claude Code, OpenClaw, or Codex
 - Fetch /skill.md, /readiness.md, paste-blocks
 - Self-register and store the apiKey
 - Ask/select the role path. Evaluators skip wallet entirely; funded

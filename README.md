@@ -50,9 +50,10 @@ Codex, OpenClaw, etc.), do a task-level preflight before the first command:
   optional product URL; no API keys, private reasoning, file contents, or secrets
 
 Prefer native HTTP/fetch tools over terminal `curl` where the runtime exposes
-them. If a Hermes skill install is needed, batch clone/copy/temp cleanup into
-one explained approval and never present `rm -rf` as a standalone first-run
-prompt.
+them. If a runtime-specific skill install is needed, batch clone/copy/temp
+cleanup into one explained approval and never present `rm -rf` as a standalone
+first-run prompt. Hermes is the current primary path, but the same trust pattern
+applies to Claude Code, OpenClaw, Codex, and custom harnesses.
 
 The simplest path is the hosted endpoint:
 
