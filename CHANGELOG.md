@@ -26,6 +26,14 @@ Hermes runtimes may expose delegation as `delegate_task` instead of `spawn`. v0.
 - Hermes with `delegate_task` gets `subAgents` credit.
 - Proof metadata starts as `unproven` in the reference scorer and does not lower a Bloom-ready setup.
 
+### Documentation clarifications
+
+- Hackathon/API docs now mirror the live skill's role-first onboarding:
+  builder/operator, autonomous agent, or evaluator.
+- Wallets are explicitly outside the Growth Readiness score and required only
+  before funded USDC mission slot reservation/submission.
+- Evaluators can run readiness/reputation-only flows without wallet friction.
+
 ---
 
 ## [v0.2.1] — 2026-05-10
